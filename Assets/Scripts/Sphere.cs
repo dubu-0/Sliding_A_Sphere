@@ -6,6 +6,7 @@ public class Sphere : MonoBehaviour
 	[SerializeField, Range(0f, 100f)] private float _maxSpeed = 10f;
 	[SerializeField, Range(0f, 100f)] private float _maxAcceleration = 10f;
 	[SerializeField, Range(0f, 10f)] private float _maxJumpHeight = 2f;
+	[SerializeField, Range(0, 5)] private int _maxAirJumps = 1;
 	
 	private const string HorizontalAxis = "Horizontal";
 	private const string VerticalAxis = "Vertical";
@@ -17,6 +18,7 @@ public class Sphere : MonoBehaviour
 	private Vector3 _desiredVelocity;
 	private bool _jumpRequired;
 	private bool _onGround;
+	private int _airJumps;
 
 	private void Awake()
 	{
@@ -34,11 +36,15 @@ public class Sphere : MonoBehaviour
 	{
 		CalculateVelocity();
 
-		if (_jumpRequired && _onGround)
+		if (_jumpRequired && (_onGround || _airJumps < _maxAirJumps))
 		{
 			Jump();
 			_jumpRequired = false;
+			_airJumps++;
 		}
+
+		if (_onGround) 
+			_airJumps = 0;
 		
 		_body.velocity = _velocity;
 		_onGround = false;
@@ -69,6 +75,7 @@ public class Sphere : MonoBehaviour
 	private void Jump()
 	{
 		var jumpSpeed = Mathf.Sqrt(-2f * Physics.gravity.y * _maxJumpHeight);
+		jumpSpeed = Mathf.Max(jumpSpeed - _velocity.y, 0f);
 		_velocity.y += jumpSpeed;
 	}
 
@@ -82,7 +89,5 @@ public class Sphere : MonoBehaviour
 			var contact = collision.GetContact(i);
 			_onGround |= contact.normal.y >= groundNormalY;
 		}
-
-		Debug.Log(groundNormalY);
 	}
 }
