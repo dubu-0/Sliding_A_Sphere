@@ -10,6 +10,7 @@ public class Sphere : MonoBehaviour
 	private const string HorizontalAxis = "Horizontal";
 	private const string VerticalAxis = "Vertical";
 	private const string JumpAxis = "Jump";
+	private const float MaxGroundSlope = 60f;
 
 	private Rigidbody _body;
 	private Vector3 _velocity;
@@ -42,10 +43,10 @@ public class Sphere : MonoBehaviour
 		_body.velocity = _velocity;
 		_onGround = false;
 	}
-
+	
 	private void OnCollisionStay(Collision collisionInfo)
 	{
-		_onGround = true;
+		EvaluateCollision(collisionInfo);
 	}
 
 	private Vector2 ReadInput()
@@ -69,5 +70,19 @@ public class Sphere : MonoBehaviour
 	{
 		var jumpSpeed = Mathf.Sqrt(-2f * Physics.gravity.y * _maxJumpHeight);
 		_velocity.y += jumpSpeed;
+	}
+
+	private void EvaluateCollision(Collision collision)
+	{
+		// Why not Mathf.Cos(...)? Because cos(-a) = cos(a) and I need that minus
+		var groundNormalY = Mathf.Sin(Mathf.Deg2Rad * (90f - MaxGroundSlope));
+		
+		for (var i = 0; i < collision.contactCount; i++)
+		{
+			var contact = collision.GetContact(i);
+			_onGround |= contact.normal.y >= groundNormalY;
+		}
+
+		Debug.Log(groundNormalY);
 	}
 }
