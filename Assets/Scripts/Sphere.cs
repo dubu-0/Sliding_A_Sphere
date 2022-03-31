@@ -15,6 +15,7 @@ public class Sphere : MonoBehaviour
 	private Vector3 _velocity;
 	private Vector3 _desiredVelocity;
 	private bool _jumpRequired;
+	private bool _onGround;
 
 	private void Awake()
 	{
@@ -32,13 +33,19 @@ public class Sphere : MonoBehaviour
 	{
 		CalculateVelocity();
 
-		if (_jumpRequired)
+		if (_jumpRequired && _onGround)
 		{
 			Jump();
 			_jumpRequired = false;
 		}
 		
 		_body.velocity = _velocity;
+		_onGround = false;
+	}
+
+	private void OnCollisionStay(Collision collisionInfo)
+	{
+		_onGround = true;
 	}
 
 	private Vector2 ReadInput()
