@@ -1,17 +1,17 @@
-using System;
 using UnityEngine;
 
 public class Sphere : MonoBehaviour
 {
 	[SerializeField, Range(0f, 100f)] private float _maxSpeed = 10f;
 	[SerializeField, Range(0f, 100f)] private float _maxAcceleration = 10f;
+	[SerializeField, Range(0f, 100f)] private float _maxAirAcceleration = 1f;
+	[SerializeField, Range(0f, 90f)] private float _maxGroundSlope = 60f;
 	[SerializeField, Range(0f, 10f)] private float _maxJumpHeight = 2f;
 	[SerializeField, Range(0, 5)] private int _maxAirJumps = 1;
 	
 	private const string HorizontalAxis = "Horizontal";
 	private const string VerticalAxis = "Vertical";
 	private const string JumpAxis = "Jump";
-	private const float MaxGroundSlope = 60f;
 
 	private Rigidbody _body;
 	private Vector3 _velocity;
@@ -19,10 +19,14 @@ public class Sphere : MonoBehaviour
 	private bool _jumpRequired;
 	private bool _onGround;
 	private int _airJumps;
+	private float _groundNormalY;
 
 	private void Awake()
 	{
 		_body = GetComponent<Rigidbody>();
+		
+		// Why not Mathf.Cos(...)? Because cos(-a) = cos(a) and I need that minus
+		_groundNormalY = Mathf.Sin(Mathf.Deg2Rad * (90f - _maxGroundSlope));
 	}
 
 	private void Update()
@@ -66,7 +70,9 @@ public class Sphere : MonoBehaviour
 
 	private void CalculateVelocity()
 	{
-		var maxSpeedChange = _maxAcceleration * Time.deltaTime;
+		var maxSpeedChange = _onGround ? _maxAcceleration : _maxAirAcceleration;
+		maxSpeedChange *= Time.deltaTime;
+
 		_velocity = _body.velocity;
 		_velocity.x = Mathf.MoveTowards(_velocity.x, _desiredVelocity.x, maxSpeedChange);
 		_velocity.z = Mathf.MoveTowards(_velocity.z, _desiredVelocity.z, maxSpeedChange);
@@ -81,13 +87,10 @@ public class Sphere : MonoBehaviour
 
 	private void EvaluateCollision(Collision collision)
 	{
-		// Why not Mathf.Cos(...)? Because cos(-a) = cos(a) and I need that minus
-		var groundNormalY = Mathf.Sin(Mathf.Deg2Rad * (90f - MaxGroundSlope));
-		
 		for (var i = 0; i < collision.contactCount; i++)
 		{
 			var contact = collision.GetContact(i);
-			_onGround |= contact.normal.y >= groundNormalY;
+			_onGround |= contact.normal.y >= _groundNormalY;
 		}
 	}
 }
