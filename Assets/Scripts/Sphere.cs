@@ -5,12 +5,16 @@ public class Sphere : MonoBehaviour
 {
 	[SerializeField, Range(0f, 100f)] private float _maxSpeed = 10f;
 	[SerializeField, Range(0f, 100f)] private float _maxAcceleration = 10f;
+	[SerializeField, Range(0f, 10f)] private float _maxJumpHeight = 2f;
 	
 	private const string HorizontalAxis = "Horizontal";
 	private const string VerticalAxis = "Vertical";
+	private const string JumpAxis = "Jump";
 
 	private Rigidbody _body;
+	private Vector3 _velocity;
 	private Vector3 _desiredVelocity;
+	private bool _jumpRequired;
 
 	private void Awake()
 	{
@@ -21,11 +25,20 @@ public class Sphere : MonoBehaviour
 	{
 		var input = ReadInput();
 		_desiredVelocity = new Vector3(input.x, 0f, input.y) * _maxSpeed;
+		_jumpRequired |= Input.GetButtonDown(JumpAxis);
 	}
 
 	private void FixedUpdate()
 	{
-		_body.velocity = CalculateVelocity();
+		CalculateVelocity();
+
+		if (_jumpRequired)
+		{
+			Jump();
+			_jumpRequired = false;
+		}
+		
+		_body.velocity = _velocity;
 	}
 
 	private Vector2 ReadInput()
@@ -37,12 +50,17 @@ public class Sphere : MonoBehaviour
 		return input;
 	}
 
-	private Vector3 CalculateVelocity()
+	private void CalculateVelocity()
 	{
 		var maxSpeedChange = _maxAcceleration * Time.deltaTime;
-		var velocity = _body.velocity;
-		velocity.x = Mathf.MoveTowards(velocity.x, _desiredVelocity.x, maxSpeedChange);
-		velocity.z = Mathf.MoveTowards(velocity.z, _desiredVelocity.z, maxSpeedChange);
-		return velocity;
+		_velocity = _body.velocity;
+		_velocity.x = Mathf.MoveTowards(_velocity.x, _desiredVelocity.x, maxSpeedChange);
+		_velocity.z = Mathf.MoveTowards(_velocity.z, _desiredVelocity.z, maxSpeedChange);
+	}
+
+	private void Jump()
+	{
+		var jumpSpeed = Mathf.Sqrt(-2f * Physics.gravity.y * _maxJumpHeight);
+		_velocity.y += jumpSpeed;
 	}
 }
