@@ -20,6 +20,7 @@ public class Sphere : MonoBehaviour
 	private bool _onGround;
 	private int _airJumps;
 	private float _groundNormalY;
+	private Vector3 _contactNormal;
 
 	private void Awake()
 	{
@@ -39,21 +40,13 @@ public class Sphere : MonoBehaviour
 	private void FixedUpdate()
 	{
 		CalculateVelocity();
-
-		if (_jumpRequired && (_onGround || _airJumps < _maxAirJumps))
-		{
-			Jump();
-			_jumpRequired = false;
-			_airJumps++;
-		}
-
-		if (_onGround) 
-			_airJumps = 0;
 		
-		_body.velocity = _velocity;
-		_onGround = false;
+		if (CanJump())
+			PerformJump();
+
+		UpdateState();
 	}
-	
+
 	private void OnCollisionStay(Collision collisionInfo)
 	{
 		EvaluateCollision(collisionInfo);
@@ -78,19 +71,45 @@ public class Sphere : MonoBehaviour
 		_velocity.z = Mathf.MoveTowards(_velocity.z, _desiredVelocity.z, maxSpeedChange);
 	}
 
+	private bool CanJump()
+	{
+		return _jumpRequired && (_onGround || _airJumps < _maxAirJumps);
+	}
+
+	private void PerformJump()
+	{
+		Jump();
+		_jumpRequired = false;
+		_airJumps++;
+	}
+
 	private void Jump()
 	{
 		var jumpSpeed = Mathf.Sqrt(-2f * Physics.gravity.y * _maxJumpHeight);
-		jumpSpeed = Mathf.Max(jumpSpeed - _velocity.y, 0f);
-		_velocity.y += jumpSpeed;
+		var velocityAlongNormal = Vector3.Dot(_contactNormal, _velocity) * _contactNormal;
+
+		if (velocityAlongNormal.y > 0)
+			jumpSpeed = Mathf.Max(jumpSpeed - velocityAlongNormal.y, 0f);
+
+		_velocity += jumpSpeed * _contactNormal;
+	}
+
+	private void UpdateState()
+	{
+		if (_onGround)
+			_airJumps = 0;
+
+		_body.velocity = _velocity;
+		_onGround = false;
+		_contactNormal = Vector3.up;
 	}
 
 	private void EvaluateCollision(Collision collision)
 	{
 		for (var i = 0; i < collision.contactCount; i++)
 		{
-			var contact = collision.GetContact(i);
-			_onGround |= contact.normal.y >= _groundNormalY;
+			_contactNormal = collision.GetContact(i).normal;
+			_onGround |= _contactNormal.y >= _groundNormalY;
 		}
 	}
 }
