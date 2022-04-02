@@ -63,12 +63,21 @@ public class Sphere : MonoBehaviour
 
 	private void CalculateVelocity()
 	{
-		var maxSpeedChange = _onGround ? _maxAcceleration : _maxAirAcceleration;
-		maxSpeedChange *= Time.deltaTime;
+		var acceleration = _onGround ? _maxAcceleration : _maxAirAcceleration;
+		var maxSpeedChange = acceleration * Time.deltaTime;
+		
+		var xPlaneUnit = ProjectOnContactPlane(Vector3.right).normalized;
+		var zPlaneUnit = ProjectOnContactPlane(Vector3.forward).normalized;
 
+		var projectedX = Vector3.Dot(_velocity, xPlaneUnit);
+		var projectedZ = Vector3.Dot(_velocity, zPlaneUnit);
+
+		var desiredX = Mathf.MoveTowards(projectedX, _desiredVelocity.x, maxSpeedChange); 
+		var desiredZ = Mathf.MoveTowards(projectedZ, _desiredVelocity.z, maxSpeedChange);
+
+		var velocityChange = xPlaneUnit * (desiredX - projectedX) + zPlaneUnit * (desiredZ - projectedZ);
 		_velocity = _body.velocity;
-		_velocity.x = Mathf.MoveTowards(_velocity.x, _desiredVelocity.x, maxSpeedChange);
-		_velocity.z = Mathf.MoveTowards(_velocity.z, _desiredVelocity.z, maxSpeedChange);
+		_velocity += velocityChange;
 	}
 
 	private bool CanJump()
@@ -86,7 +95,7 @@ public class Sphere : MonoBehaviour
 	private void Jump()
 	{
 		var jumpSpeed = Mathf.Sqrt(-2f * Physics.gravity.y * _maxJumpHeight);
-		var velocityAlongNormal = Vector3.Dot(_contactNormal, _velocity) * _contactNormal;
+		var velocityAlongNormal = ProjectOnContactNormal(_velocity);
 
 		if (velocityAlongNormal.y > 0)
 			jumpSpeed = Mathf.Max(jumpSpeed - velocityAlongNormal.y, 0f);
@@ -111,5 +120,15 @@ public class Sphere : MonoBehaviour
 			_contactNormal = collision.GetContact(i).normal;
 			_onGround |= _contactNormal.y >= _groundNormalY;
 		}
+	}
+
+	private Vector3 ProjectOnContactPlane(Vector3 vector)
+	{
+		return vector - ProjectOnContactNormal(vector);
+	}
+
+	private Vector3 ProjectOnContactNormal(Vector3 vector)
+	{
+		return Vector3.Dot(vector, _contactNormal) * _contactNormal;
 	}
 }
