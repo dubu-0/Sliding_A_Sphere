@@ -30,13 +30,6 @@ public class Sphere : MonoBehaviour
 		_groundNormalY = Mathf.Sin(Mathf.Deg2Rad * (90f - _maxGroundSlope));
 	}
 
-	private void Update()
-	{
-		var input = ReadInput();
-		_desiredVelocity = new Vector3(input.x, 0f, input.y) * _maxSpeed;
-		_jumpRequired |= Input.GetButtonDown(JumpAxis);
-	}
-
 	private void FixedUpdate()
 	{
 		CalculateVelocity();
@@ -50,6 +43,13 @@ public class Sphere : MonoBehaviour
 	private void OnCollisionStay(Collision collisionInfo)
 	{
 		EvaluateCollision(collisionInfo);
+	}
+
+	private void Update()
+	{
+		var input = ReadInput();
+		_desiredVelocity = new Vector3(input.x, 0f, input.y) * _maxSpeed;
+		_jumpRequired |= Input.GetButtonDown(JumpAxis);
 	}
 
 	private Vector2 ReadInput()
@@ -117,9 +117,11 @@ public class Sphere : MonoBehaviour
 	{
 		for (var i = 0; i < collision.contactCount; i++)
 		{
-			_contactNormal = collision.GetContact(i).normal;
+			_contactNormal += collision.GetContact(i).normal;
 			_onGround |= _contactNormal.y >= _groundNormalY;
 		}
+		
+		_contactNormal.Normalize();
 	}
 
 	private Vector3 ProjectOnContactPlane(Vector3 vector)
